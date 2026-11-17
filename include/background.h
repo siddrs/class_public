@@ -101,6 +101,18 @@ struct background
   int * ncdm_input_q_size; /**< Vector of numbers of q bins */
   double * ncdm_qmax;      /**< Vector of maximum value of q */
 
+  /** Self-interacting sterile neutrino (SInu) parameters (arXiv:1911.08512) */
+  double G_X_over_G_F;       /**< G_X / G_F (e.g. 1e10 for G_X = 10^10 G_F, default 0) */
+  double sinu_rho_ss;        /**< Diagonal sterile density matrix element rho_ss from QKEs (default 0.50) */
+  double sinu_theta12_deg;   /**< Active mixing angle theta_12 in degrees (default 33.82) */
+  double sinu_theta13_deg;   /**< Active mixing angle theta_13 in degrees (default 8.61) */
+  double sinu_theta23_deg;   /**< Active mixing angle theta_23 in degrees (default 48.3) */
+  double sinu_theta14_rad;   /**< Sterile mixing angle theta_14 in radians (default 0.67) */
+  int sinu_matrix_mode;      /**< 0: U*diag(0,0,0,1)*U^T (Eq. 21), 1: U^T*diag(0,0,0,1)*U, 2: diag(0,0,0,1) */
+  int sinu_disable_ncdmfa;   /**< Whether to disable ncdm fluid approximation when G_X > 0 */
+  double sinu_W[4][4];       /**< Precomputed 4x4 mixing projection matrix in mass basis */
+  double sinu_rate_factor;   /**< Precomputed (3/2)*(zeta(3)/pi^2)*G_X^2*T_nu0^5*rho_ss in Mpc^-1 */
+
   double Omega0_k;         /**< \f$ \Omega_{0_k} \f$: curvature contribution */
 
   double Omega0_lambda;    /**< \f$ \Omega_{0_\Lambda} \f$: cosmological constant */

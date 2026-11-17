@@ -2789,6 +2789,78 @@ int input_read_parameters_species(struct file_content * pfc,
       pba->Omega0_ncdm_tot += pba->Omega0_ncdm[n];
     }
 
+    /** 5.i) Self-interacting sterile neutrino (SInu) parameters (arXiv:1911.08512) */
+    class_read_double("G_X_over_G_F", pba->G_X_over_G_F);
+    class_read_double("sinu_rho_ss", pba->sinu_rho_ss);
+    class_read_double("sinu_theta12_deg", pba->sinu_theta12_deg);
+    class_read_double("sinu_theta13_deg", pba->sinu_theta13_deg);
+    class_read_double("sinu_theta23_deg", pba->sinu_theta23_deg);
+    class_read_double("sinu_theta14_rad", pba->sinu_theta14_rad);
+    class_read_int("sinu_matrix_mode", pba->sinu_matrix_mode);
+    class_read_int("sinu_disable_ncdmfa", pba->sinu_disable_ncdmfa);
+
+    if (pba->G_X_over_G_F > 0.0) {
+      double th12 = pba->sinu_theta12_deg * _PI_ / 180.0;
+      double th13 = pba->sinu_theta13_deg * _PI_ / 180.0;
+      double th23 = pba->sinu_theta23_deg * _PI_ / 180.0;
+      double th14 = pba->sinu_theta14_rad;
+      double c12 = cos(th12), s12 = sin(th12);
+      double c13 = cos(th13), s13 = sin(th13);
+      double c23 = cos(th23), s23 = sin(th23);
+      double c14 = cos(th14), s14 = sin(th14);
+      double U[4][4];
+      int ii, jj;
+
+      /* U = R23 * R14 * R13 * R12 (with theta24 = theta34 = 0) */
+      U[0][0] = c14 * c13 * c12;
+      U[0][1] = c14 * c13 * s12;
+      U[0][2] = c14 * s13;
+      U[0][3] = s14;
+
+      U[1][0] = -c23 * s12 - s23 * s13 * c12;
+      U[1][1] =  c23 * c12 - s23 * s13 * s12;
+      U[1][2] =  s23 * c13;
+      U[1][3] =  0.0;
+
+      U[2][0] =  s23 * s12 - c23 * s13 * c12;
+      U[2][1] = -s23 * c12 - c23 * s13 * s12;
+      U[2][2] =  c23 * c13;
+      U[2][3] =  0.0;
+
+      U[3][0] = -s14 * c13 * c12;
+      U[3][1] = -s14 * c13 * s12;
+      U[3][2] = -s14 * s13;
+      U[3][3] =  c14;
+
+      for (ii = 0; ii < 4; ii++) {
+        for (jj = 0; jj < 4; jj++) {
+          if (pba->sinu_matrix_mode == 0) {
+            /* U * diag(0,0,0,1) * U^T */
+            pba->sinu_W[ii][jj] = U[ii][3] * U[jj][3];
+          }
+          else if (pba->sinu_matrix_mode == 1) {
+            /* U^T * diag(0,0,0,1) * U */
+            pba->sinu_W[ii][jj] = U[3][ii] * U[3][jj];
+          }
+          else {
+            /* diag(0,0,0,1) */
+            pba->sinu_W[ii][jj] = (ii == 3 && jj == 3) ? 1.0 : 0.0;
+          }
+        }
+      }
+
+      /* Compute sinu_rate_factor = (3/2) * (zeta(3)/pi^2) * G_X^2 * T_nu0^5 * rho_ss in Mpc^-1 */
+      double G_F_eV2 = 1.1663787e-23; /* G_F in eV^-2 */
+      double G_X_eV2 = pba->G_X_over_G_F * G_F_eV2;
+      double T_nu0_eV = pba->T_cmb * pba->T_ncdm[0] * _k_B_ / _eV_;
+      double zeta3 = 1.2020569031595942;
+      double hbar_c_eV_m = (_h_P_ / (2.0 * _PI_)) * _c_ / _eV_;
+      double eV_to_invMpc = _Mpc_over_m_ / hbar_c_eV_m;
+
+      pba->sinu_rate_factor = 1.5 * (zeta3 / (_PI_ * _PI_)) * (G_X_eV2 * G_X_eV2)
+        * pow(T_nu0_eV, 5) * pba->sinu_rho_ss * eV_to_invMpc;
+    }
+
   }
   class_test(pba->Omega0_ncdm_tot<0,errmsg,"You cannot set the NCDM density to negative values.");
   if (has_m_budget == _TRUE_) {
@@ -6110,6 +6182,15 @@ int input_default_params(struct background *pba,
   pba->deg_ncdm_default = 1.;
   pba->deg_ncdm = NULL;
   /** 5.h) --> See read_parameters_background */
+  pba->G_X_over_G_F = 0.0;
+  pba->sinu_rho_ss = 0.50;
+  pba->sinu_theta12_deg = 33.82;
+  pba->sinu_theta13_deg = 8.61;
+  pba->sinu_theta23_deg = 48.3;
+  pba->sinu_theta14_rad = 0.67;
+  pba->sinu_matrix_mode = 0;
+  pba->sinu_disable_ncdmfa = 0;
+  pba->sinu_rate_factor = 0.0;
 
   /** 6) Curvature density */
   pba->Omega0_k = 0.;

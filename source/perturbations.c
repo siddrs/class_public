@@ -6969,7 +6969,8 @@ int perturbations_approximations(
     if (pba->has_ncdm == _TRUE_) {
 
       if ((tau/tau_k > ppr->ncdm_fluid_trigger_tau_over_tau_k) &&
-          (ppr->ncdm_fluid_approximation != ncdmfa_none)) {
+          (ppr->ncdm_fluid_approximation != ncdmfa_none) &&
+          (pba->sinu_disable_ncdmfa == 0)) {
 
         ppw->approx[ppw->index_ap_ncdmfa] = (int)ncdmfa_on;
       }
@@ -11112,6 +11113,23 @@ int perturbations_derivs(double tau,
                 but with curvature taken into account a la arXiv:1305.3261 */
 
             dy[idx+l] = qk_div_epsilon*y[idx+l-1]-(1.+l)*k*cotKgen*y[idx+l];
+
+            /** - -----> Self-interacting sterile neutrino collision term -Gamma_ij * Psi_{j,l} for l >= 2 (Eq. 23c-23d of arXiv:1911.08512) */
+            if ((pba->G_X_over_G_F > 0.0) && (pv->N_ncdm == 4)) {
+              double inv_tau_nu = pba->sinu_rate_factor / (a2 * a2);
+              int j_ncdm, l_stride = pv->l_max_ncdm[n_ncdm] + 1;
+              int q_stride = pv->q_size_ncdm[n_ncdm] * l_stride;
+              int base_q_idx = pv->index_pt_psi0_ncdm1 + index_q * l_stride;
+              for (j_ncdm = 0; j_ncdm < 4; j_ncdm++) {
+                double Gamma_ij = pba->sinu_W[n_ncdm][j_ncdm] * inv_tau_nu;
+                if (Gamma_ij != 0.0) {
+                  int idx_j = base_q_idx + j_ncdm * q_stride;
+                  for (l = 2; l <= pv->l_max_ncdm[n_ncdm]; l++) {
+                    dy[idx+l] -= Gamma_ij * y[idx_j+l];
+                  }
+                }
+              }
+            }
 
             /** - -----> jump to next momentum bin or species */
 
